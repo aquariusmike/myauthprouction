@@ -8,19 +8,17 @@
 <body class="dash">
 
 <div class="nav">
-    <h3 id="email"></h3>
+    <h3 id="email">Loading...</h3>
     <a href="/logout" class="logout">Logout</a>
 </div>
 
 <div class="content">
 
-    <!-- Student -->
     <div id="stuDiv" class="box hidden">
         <h2>Student Documents</h2>
         <p>Welcome student! Here are your school documents.</p>
     </div>
 
-    <!-- Normal Gmail -->
     <div id="normalDiv" class="box hidden">
         <h2>Enrollment</h2>
         <p>You can apply for enrollment here.</p>
@@ -28,26 +26,42 @@
 
 </div>
 
-
 <script>
 fetch("/session-info")
-    .then(res => res.json())
+    .then(res => {
+        // Check for 404 or other HTTP errors before parsing JSON
+        if (!res.ok) {
+            console.error("Session info failed to load. Redirecting to login.");
+            location.href = "/index.html"; 
+            throw new Error('Fetch failed');
+        }
+        return res.json();
+    })
     .then(data => {
+        // Redirection if session is not logged in (shouldn't happen with ensureLoggedIn)
         if (!data.loggedIn) {
-            location.href = "/index.html"; // Redirect to index/login page
+            location.href = "/index.html";
             return;
         }
+
         document.getElementById("email").innerText = data.email;
 
-        // ✅ FIX APPLIED: Using the requested 'data.email.includes("stu")' check
+        // ✅ CLIENT-SIDE FIX: Using the requested 'data.email.includes("stu")' check
         if (data.email.includes("stu")) {
             document.getElementById("stuDiv").classList.remove("hidden");
         } else {
             document.getElementById("normalDiv").classList.remove("hidden");
         }
+    })
+    .catch(error => {
+        // Catch any network errors or JSON parsing errors
+        if (error.message !== 'Fetch failed') {
+            console.error("Error processing session data:", error);
+            // Optional: Redirect to login on generic error
+            // location.href = "/index.html"; 
+        }
     });
 </script>
-
 
 </body>
 </html>
