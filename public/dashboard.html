@@ -28,16 +28,18 @@
 
 </div>
 
+
 <script>
 fetch("/session-info")
     .then(res => res.json())
     .then(data => {
         if (!data.loggedIn) {
-            location.href = "/login";
+            location.href = "/index.html"; // Redirect to index/login page
             return;
         }
         document.getElementById("email").innerText = data.email;
 
+        // ✅ FIX APPLIED: Using the requested 'data.email.includes("stu")' check
         if (data.email.includes("stu")) {
             document.getElementById("stuDiv").classList.remove("hidden");
         } else {
@@ -45,6 +47,7 @@ fetch("/session-info")
         }
     });
 </script>
+
 
 </body>
 </html>
