@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: #eef2f3;
+      font-family: Arial;
+    }
+    .box {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+    }
+    button {
+      background: #4285F4;
+      color: white;
+      padding: 12px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #3367D6;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>Welcome to Pathfinder Institute Myanmar <br>School Login</h2>
+    <p>Only @stu.pathfinder-mm.org allowed</p>
+
+    <a href="/auth/google">
+      <button>Sign in with Google</button>
+    </a>
+ 
+    
+    <p id="authErrorMessage" style="color: red; font-weight: bold;"></p>
+  </div>
+  <footer style="position: fixed; bottom: 10px; font-size: 12px; color: #888;">
+    &copy; Made By Mike Frost with ❤️
+  </footer>
+
+
+  <script>
+    // Get the query parameters from the URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const authError = urlParams.get('authError');
+
+    if (authError) {
+        // Decode and display the error message
+        const decodedMessage = decodeURIComponent(authError);
+        document.getElementById('authErrorMessage').innerText = `You are not verified student of Pathfinder Institute Myanmar. (${decodedMessage})`;
+    }
+</script>
+</body>
+<
+</html>

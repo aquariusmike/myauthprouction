@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body class="dash">
+
+<div class="nav">
+    <h3 id="email"></h3>
+    <a href="/logout" class="logout">Logout</a>
+</div>
+
+<div class="content">
+
+    <!-- Student -->
+    <div id="stuDiv" class="box hidden">
+        <h2>Student Documents</h2>
+        <p>Welcome student! Here are your school documents.</p>
+    </div>
+
+    <!-- Normal Gmail -->
+    <div id="normalDiv" class="box hidden">
+        <h2>Enrollment</h2>
+        <p>You can apply for enrollment here.</p>
+    </div>
+
+</div>
+
+<script>
+fetch("/session-info")
+    .then(res => res.json())
+    .then(data => {
+        if (!data.loggedIn) {
+            location.href = "/login";
+            return;
+        }
+        document.getElementById("email").innerText = data.email;
+
+        if (data.email.includes("stu")) {
+            document.getElementById("stuDiv").classList.remove("hidden");
+        } else {
+            document.getElementById("normalDiv").classList.remove("hidden");
+        }
+    });
+</script>
+
+</body>
+</html>
