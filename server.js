@@ -1,4 +1,4 @@
-// server.js (WITH ALL FIXES AND NEW ENDPOINT)
+// server.js (FULLY ES MODULE COMPATIBLE, Production Ready)
 import express from "express";
 import session from "express-session";
 import passport from "passport";
@@ -13,19 +13,16 @@ dotenv.config();
 
 const app = express();
 
-// ----------------------------------------------------
-// ✅ FIX 1: TRUST PROXY & Cookie Security
+// ✅ FIX 1: TRUST PROXY & Cookie Security for Vercel/proxies
 app.set('trust proxy', 1); 
-// ----------------------------------------------------
 
 // -----------------------
-// REDIS CLIENT SETUP (No changes needed here)
+// REDIS CLIENT SETUP
 // -----------------------
 let redisClient;
 let sessionStore;
 
 if (process.env.KV_URL) {
-  // Production: Use Redis (Vercel KV / Upstash)
   redisClient = createClient({
     url: process.env.KV_URL,
   });
@@ -56,7 +53,7 @@ app.use(
     secret: process.env.SESSION_SECRET || "change-this-secret",
     resave: false,
     saveUninitialized: false,
-    rolling: true,
+    rolling: true, 
     cookie: {
       // ✅ FIX 2: Correct secure flag setting for proxies
       secure: process.env.NODE_ENV === "production" && app.get('env') !== 'development', 
@@ -71,14 +68,14 @@ app.use(passport.session());
 app.use(flash());
 
 // -----------------------
-// GOOGLE OAUTH STRATEGY (No changes needed here)
+// GOOGLE OAUTH STRATEGY
 // -----------------------
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: `${process.env.BASE_URL}/auth/google/callback`,
+      callbackURL: `${process.env.BASE_URL}/auth/google/callback`, 
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -86,6 +83,7 @@ passport.use(
         let role = "general";
         let isAuthorized = false;
 
+        // Custom Authorization Logic
         if (email.endsWith("@stu.pathfinder-mm.org") || email === "avagarimike11@gmail.com") {
           role = "student";
           isAuthorized = true;
@@ -109,7 +107,7 @@ passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
 // -----------------------
-// AUTH ROUTES (No changes needed here)
+// AUTH ROUTES
 // -----------------------
 app.get(
   "/auth/google",
@@ -123,7 +121,8 @@ app.get(
     failureFlash: true,
   }),
   (req, res) => {
-    res.redirect("/dashboard");
+    // Redirect to the dashboard route
+    res.redirect("/dashboard"); 
   }
 );
 
@@ -143,17 +142,17 @@ function ensureLoggedIn(req, res, next) {
   res.redirect("/index.html");
 }
 
-// ✅ NEW ROUTE: API Endpoint for Client-Side Script
+// ✅ NEW ROUTE: API Endpoint to feed client-side dashboard
 app.get("/session-info", ensureLoggedIn, (req, res) => {
     res.json({
         loggedIn: true,
         email: req.user.email,
         name: req.user.name,
-        role: req.user.role,
+        role: req.user.role, // Pass the role, although client uses email check
     });
 });
 
-// ✅ UPDATED ROUTE: Serve the actual Dashboard HTML file
+// ✅ UPDATED ROUTE: Serves the physical dashboard.html file
 app.get("/dashboard", ensureLoggedIn, (req, res) => {
   // Assuming dashboard.html is in your public directory
   res.sendFile(path.join(process.cwd(), "public", "dashboard.html"));
@@ -165,12 +164,6 @@ app.get("/logout", (req, res, next) => {
     req.session.destroy(() => res.redirect("/index.html"));
   });
 });
-
-// -----------------------
-// START SERVER
-// -----------------------
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
 
 // -----------------------
 // START SERVER
