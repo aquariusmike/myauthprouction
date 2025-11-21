@@ -1,4 +1,4 @@
-// server.js (FULLY ES MODULE COMPATIBLE FIX)
+// server.js (WITH ALL FIXES AND NEW ENDPOINT)
 import express from "express";
 import session from "express-session";
 import passport from "passport";
@@ -7,16 +7,19 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import flash from "connect-flash";
 import path from "path";
 import { createClient } from "redis";
-
-// 👇 FIX: Use curly braces for named import
 import { RedisStore } from "connect-redis"; 
 
 dotenv.config();
 
 const app = express();
 
+// ----------------------------------------------------
+// ✅ FIX 1: TRUST PROXY & Cookie Security
+app.set('trust proxy', 1); 
+// ----------------------------------------------------
+
 // -----------------------
-// REDIS CLIENT SETUP
+// REDIS CLIENT SETUP (No changes needed here)
 // -----------------------
 let redisClient;
 let sessionStore;
@@ -29,19 +32,15 @@ if (process.env.KV_URL) {
 
   redisClient.on("error", (err) => console.error("Redis Client Error", err));
   redisClient.on("connect", () => console.log("✅ Redis Connected"));
-
   redisClient.connect().catch(console.error);
 
-  // Initialize store using the imported Class
   sessionStore = new RedisStore({
     client: redisClient,
     prefix: "sess:",
-    ttl: 14 * 24 * 60 * 60, // 14 days
+    ttl: 14 * 24 * 60 * 60,
   });
-
   console.log("✅ Using Redis session store (production)");
 } else {
-  // Development: Use memory store (not for production!)
   sessionStore = undefined;
   console.log("⚠️ Using in-memory sessions (development only)");
 }
@@ -57,11 +56,12 @@ app.use(
     secret: process.env.SESSION_SECRET || "change-this-secret",
     resave: false,
     saveUninitialized: false,
-    rolling: true, // reset session expiration on activity
+    rolling: true,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // HTTPS in production
+      // ✅ FIX 2: Correct secure flag setting for proxies
+      secure: process.env.NODE_ENV === "production" && app.get('env') !== 'development', 
       httpOnly: true,
-      maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days
+      maxAge: 14 * 24 * 60 * 60 * 1000,
     },
   })
 );
@@ -71,7 +71,7 @@ app.use(passport.session());
 app.use(flash());
 
 // -----------------------
-// GOOGLE OAUTH STRATEGY
+// GOOGLE OAUTH STRATEGY (No changes needed here)
 // -----------------------
 passport.use(
   new GoogleStrategy(
@@ -86,12 +86,7 @@ passport.use(
         let role = "general";
         let isAuthorized = false;
 
-        if (email.endsWith("@stu.pathfinder-mm.org")) {
-          role = "student";
-          isAuthorized = true;
-        }
-
-        if (email === "avagarimike11@gmail.com") {
+        if (email.endsWith("@stu.pathfinder-mm.org") || email === "avagarimike11@gmail.com") {
           role = "student";
           isAuthorized = true;
         }
@@ -114,7 +109,7 @@ passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
 // -----------------------
-// AUTH ROUTES
+// AUTH ROUTES (No changes needed here)
 // -----------------------
 app.get(
   "/auth/google",
@@ -140,40 +135,28 @@ app.get("/auth/failure", (req, res) => {
 });
 
 // -----------------------
-// PROTECTED ROUTES
+// PROTECTED ROUTES & API ENDPOINTS
 // -----------------------
+
 function ensureLoggedIn(req, res, next) {
   if (req.isAuthenticated()) return next();
   res.redirect("/index.html");
 }
 
+// ✅ NEW ROUTE: API Endpoint for Client-Side Script
+app.get("/session-info", ensureLoggedIn, (req, res) => {
+    res.json({
+        loggedIn: true,
+        email: req.user.email,
+        name: req.user.name,
+        role: req.user.role,
+    });
+});
+
+// ✅ UPDATED ROUTE: Serve the actual Dashboard HTML file
 app.get("/dashboard", ensureLoggedIn, (req, res) => {
-  const { name, email, role } = req.user;
-  res.send(`
-    <html>
-      <head>
-        <title>Dashboard</title>
-        <style>
-          body { font-family: Arial; padding: 20px; }
-          .card { padding: 20px; border: 1px solid #ddd; border-radius: 10px; margin-top: 20px; }
-          .stu { background: #e3f2fd; }
-          .gen { background: #fff3e0; }
-        </style>
-      </head>
-      <body>
-        <h2>Welcome ${name}</h2>
-        <p>Email: ${email}</p>
-        <p>Role: <b>${role}</b></p>
-        ${
-          role === "student"
-            ? `<div class="card stu"><h3>Student Docs Section</h3></div>`
-            : `<div class="card gen"><h3>Enrollment Section</h3></div>`
-        }
-        <br>
-        <a href="/logout">Logout</a>
-      </body>
-    </html>
-  `);
+  // Assuming dashboard.html is in your public directory
+  res.sendFile(path.join(process.cwd(), "public", "dashboard.html"));
 });
 
 app.get("/logout", (req, res, next) => {
@@ -182,6 +165,12 @@ app.get("/logout", (req, res, next) => {
     req.session.destroy(() => res.redirect("/index.html"));
   });
 });
+
+// -----------------------
+// START SERVER
+// -----------------------
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
 
 // -----------------------
 // START SERVER
